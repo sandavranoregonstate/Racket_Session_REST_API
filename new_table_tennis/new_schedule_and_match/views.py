@@ -9,21 +9,21 @@ from rest_framework.parsers import JSONParser
 from .models import Schedule
 from .serializers import ScheduleSerializer
 
-class ListSchedule(APIView):
-    parser_classes = (JSONParser,)
-
-    def get(self, request):
-        id_user = request.data.get('id_user')
-        schedules = Schedule.objects.filter(id_user=id_user)
-        serializer = ScheduleSerializer(schedules, many=True)
-        return JsonResponse({'items': serializer.data})
-
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 from .models import Drill, ScheduleToDrill
 from .serializers import ScheduleToDrillSerializer
 
-class SubmitSchedule(APIView):
+class ListSchedule(APIView):
     parser_classes = (JSONParser,)
+
+    def get(self, request ):
+        id_user = request.GET.get('id_user')
+        schedules = Schedule.objects.filter(id_user=id_user)
+        serializer = ScheduleSerializer(schedules, many=True)
+        return Response({'items': serializer.data})
 
     def post(self, request):
         # Create the Schedule entry
@@ -31,7 +31,7 @@ class SubmitSchedule(APIView):
         if schedule_serializer.is_valid():
             schedule = schedule_serializer.save()
         else:
-            return HttpResponse(schedule_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(schedule_serializer.errors, status=status.HTTP_404_BAD_REQUEST)
 
         # Create the ScheduleToDrill entries
         drills = request.data.get('drills', [])
@@ -45,12 +45,12 @@ class SubmitSchedule(APIView):
             if schedule_to_drill_serializer.is_valid():
                 schedule_to_drill_serializer.save()
             else:
-                return HttpResponse(schedule_to_drill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(schedule_to_drill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         # Call the Pair method (not implemented here)
         # pair()
 
-        return HttpResponse( status=status.HTTP_201_CREATED )
+        return Response(status=status.HTTP_201_CREATED)
 
 class ViewSchedule(APIView):
     parser_classes = (JSONParser,)
@@ -60,27 +60,24 @@ class ViewSchedule(APIView):
         try:
             schedule = Schedule.objects.get(id_schedule=id_schedule)
         except Schedule.DoesNotExist:
-            return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         # Get the list of ScheduleToDrill entries
         schedule_to_drills = ScheduleToDrill.objects.filter(id_schedule=id_schedule)
         schedule_serializer = ScheduleSerializer(schedule)
         schedule_to_drill_serializer = ScheduleToDrillSerializer(schedule_to_drills, many=True)
 
-        return HttpResponse({
+        return Response({
             'Schedule': schedule_serializer.data,
             'ScheduleToDrill': schedule_to_drill_serializer.data
         })
-
-
-class DeleteSchedule(APIView):
-    parser_classes = (JSONParser,)
 
     def delete(self, request, id_schedule):
         try:
             schedule = Schedule.objects.get(id_schedule=id_schedule)
         except Schedule.DoesNotExist:
-            return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         schedule.delete()
-        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+

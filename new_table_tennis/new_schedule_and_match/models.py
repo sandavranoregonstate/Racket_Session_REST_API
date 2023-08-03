@@ -6,7 +6,7 @@ class Location(models.Model):
     the_address = models.CharField(max_length=255)
     table_number = models.IntegerField()
 
-class User(models.Model):
+class TheUser(models.Model):
     id_user = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -24,8 +24,8 @@ class User(models.Model):
 
 class Match(models.Model):
     id_match = models.AutoField(primary_key=True)
-    id_player_a = models.ForeignKey(User, related_name='player_a', on_delete=models.CASCADE)
-    id_player_b = models.ForeignKey(User, related_name='player_b', on_delete=models.CASCADE)
+    id_player_a = models.ForeignKey(TheUser, related_name='player_a', on_delete=models.CASCADE)
+    id_player_b = models.ForeignKey(TheUser, related_name='player_b', on_delete=models.CASCADE)
     location = models.ForeignKey(Location, null=True, on_delete=models.SET_NULL)
     the_current_status_a = models.CharField(max_length=255, choices=[('pending', 'pending'), ('accepted', 'accepted'), ('rejected', 'rejected'), ('deleted', 'deleted')])
     the_current_status_b = models.CharField(max_length=255, choices=[('pending', 'pending'), ('accepted', 'accepted'), ('rejected', 'rejected'), ('deleted', 'deleted')])
@@ -36,8 +36,8 @@ class Match(models.Model):
 class Feedback(models.Model):
     id_feedback = models.AutoField(primary_key=True)
     id_match = models.ForeignKey(Match, on_delete=models.CASCADE)
-    id_player_a = models.ForeignKey(User, related_name='feedback_player_a', on_delete=models.CASCADE)
-    id_player_b = models.ForeignKey(User, related_name='feedback_player_b', on_delete=models.CASCADE)
+    id_player_a = models.ForeignKey(TheUser, related_name='feedback_player_a', on_delete=models.CASCADE)
+    id_player_b = models.ForeignKey(TheUser, related_name='feedback_player_b', on_delete=models.CASCADE)
     status = models.CharField(max_length=255, choices=[('pending', 'pending'), ('completed', 'completed')])
     serve_feedback = models.IntegerField(choices=[(i, i) for i in range(1, 11)])
     receive_feedback = models.IntegerField(choices=[(i, i) for i in range(1, 11)])
@@ -50,12 +50,12 @@ class Feedback(models.Model):
 class Result(models.Model):
     id_result = models.AutoField(primary_key=True)
     id_match = models.ForeignKey(Match, on_delete=models.CASCADE)
-    id_player_victory = models.ForeignKey(User, on_delete=models.CASCADE)
+    id_player_victory = models.ForeignKey(TheUser, on_delete=models.CASCADE)
     status = models.CharField(max_length=255, choices=[('pending', 'pending'), ('completed', 'completed')])
 
 class Schedule(models.Model):
     id_schedule = models.AutoField(primary_key=True)
-    id_user = models.ForeignKey(User, on_delete=models.CASCADE)
+    id_user = models.ForeignKey(TheUser, on_delete=models.CASCADE)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
     date = models.DateField()
     type = models.CharField(max_length=255, choices=[('training', 'training'), ('competitive', 'competitive')])
@@ -74,4 +74,4 @@ class MatchToDrill(models.Model):
     id_match_to_drill = models.AutoField(primary_key=True)
     id_drill = models.ForeignKey(Drill, on_delete=models.CASCADE)
     id_match = models.ForeignKey(Match, on_delete=models.CASCADE)
-    id_player = models.ForeignKey(User, on_delete=models.CASCADE)
+    id_player = models.ForeignKey(TheUser, on_delete=models.CASCADE)
