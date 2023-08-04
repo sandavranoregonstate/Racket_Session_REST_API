@@ -81,3 +81,105 @@ class ViewSchedule(APIView):
         schedule.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+from django.db.models import Q
+from .models import Match
+from .serializers import MatchSerializer
+
+class ListMatch(APIView):
+
+    def get(self, request):
+        id_user = request.GET.get('id_user')
+        if id_user is None:
+            return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        matches = Match.objects.filter(Q(id_player_a=id_user) | Q(id_player_b=id_user))
+        serializer = MatchSerializer(matches, many=True)
+        return Response(serializer.data)
+
+
+from .models import MatchToDrill
+from .serializers import MatchToDrillSerializer
+
+class ViewMatch(APIView):
+
+    def get(self, request, id_match):
+        # Get the Match entry
+        try:
+            match = Match.objects.get(id_match=id_match)
+        except Match.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Get the list of MatchToDrill entries
+        match_to_drills = MatchToDrill.objects.filter(id_match=id_match)
+        match_serializer = MatchSerializer(match)
+        match_to_drill_serializer = MatchToDrillSerializer(match_to_drills, many=True)
+
+        return Response({
+            'Match': match_serializer.data,
+            'MatchToDrill': match_to_drill_serializer.data
+        })
+
+from .models import Feedback
+from .serializers import FeedbackSerializer
+
+class ListPendingFeedback(APIView):
+
+    def get(self, request):
+        id_user = request.GET.get('id_user')
+        if id_user is None:
+            return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        feedbacks = Feedback.objects.filter(Q(id_player_a=id_user) | Q(id_player_b=id_user), status='pending')
+        serializer = FeedbackSerializer(feedbacks, many=True)
+        return Response({'items': serializer.data})
+
+class ViewPendingFeedback(APIView):
+
+    def get(self, request, id_pending_feedback):
+        # Get the Feedback entry
+        try:
+            feedback = Feedback.objects.get(id_feedback=id_pending_feedback, status='pending')
+        except Feedback.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = FeedbackSerializer(feedback)
+        return Response(serializer.data)
+
+class SubmitFeedback(APIView):
+
+    def patch(self, request, id_pending_feedback):
+        # Get the Feedback entry
+        try:
+            feedback = Feedback.objects.get(id_feedback=id_pending_feedback, status='pending')
+        except Feedback.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Update the fields with the input from the request body
+        feedback.serve_feedback = request.data.get('serve_feedback')
+        feedback.receive_feedback = request.data.get('receive_feedback')
+        feedback.forehand_loop_feedback = request.data.get('forehand_loop_feedback')
+        feedback.backhand_loop_feedback = request.data.get('backhand_loop_feedback')
+        feedback.forehand_block_feedback = request.data.get('forehand_block_feedback')
+        feedback.backhand_block_feedback = request.data.get('backhand_block_feedback')
+        feedback.personal_feedback = request.data.get('personal_feedback')
+        feedback.status = 'completed'
+        feedback.save()
+
+        # Call the CalculateTheSkillPoint method (not implemented here)
+        # CalculateTheSkillPoint()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+from .models import Feedback
+from .serializers import FeedbackSerializer
+
+class ListCompletedFeedback(APIView):
+
+    def get(self, request):
+        id_user = request.GET.get('id_user')
+        if id_user is None:
+            return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        feedbacks = Feedback.objects.filter(Q(id_player_a=id_user) | Q(id_player_b=id_user), status='completed')
+        serializer = FeedbackSerializer(feedbacks, many=True)
+        return Response({'items': serializer.data})
