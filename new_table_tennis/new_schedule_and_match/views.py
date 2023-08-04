@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpResponse
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser
-from .models import Schedule
+from .models import TheUser , Schedule, Location
 from .serializers import ScheduleSerializer
 
 from rest_framework import status
@@ -16,22 +16,62 @@ from rest_framework.response import Response
 from .models import Drill, ScheduleToDrill
 from .serializers import ScheduleToDrillSerializer
 
+
+# it takes the given location as id and the drills as string
+
+
+from .models import Schedule
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
 class ListSchedule(APIView):
     parser_classes = (JSONParser,)
 
-    def get(self, request ):
+    def get(self, request):
+        # Extracting the id_user from the request URL query
         id_user = request.GET.get('id_user')
+
+        # From the database get the list of all “Schedule” entry
         schedules = Schedule.objects.filter(id_user=id_user)
-        serializer = ScheduleSerializer(schedules, many=True)
-        return Response({'items': serializer.data})
+
+        # Prepare the response data, making sure to return the name of the location, not the id
+        data_r = {
+            'items': [
+                {
+                    'id_schedule': schedule.id_schedule,
+                    'location': schedule.location.name,  # Return the name of the location
+                    'date': schedule.date,
+                    'type': schedule.type,
+                    'start_time': schedule.start_time
+                }
+                for schedule in schedules
+            ]
+        }
+
+        data_n = data_r[ "items"]
+
+        # Return a list of “Schedule” entry to the client
+        return Response(data_n, status=status.HTTP_200_OK)
 
     def post(self, request):
-        # Create the Schedule entry
-        schedule_serializer = ScheduleSerializer(data=request.data)
-        if schedule_serializer.is_valid():
-            schedule = schedule_serializer.save()
-        else:
-            return Response(schedule_serializer.errors, status=status.HTTP_404_BAD_REQUEST)
+
+        # Extracting the data from the request body
+        id_user = request.data['id_user']
+        location_string = request.data['location']
+        date = request.data['date']
+        type = request.data['type']
+        start_time = request.data['start_time']
+
+        # Make sure to convert location, which is a string to the id_location, in order to add it as a foreign key
+        try:
+            location = Location.objects.get(name=location_string)
+        except Location.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Create the “Schedule” entry using the data from the input, except the drill list
+        schedule = Schedule(id_user= TheUser.objects.get( id_user = id_user ), location=location, date=date, type=type, start_time=start_time)
+        schedule.save()
 
         # Create the ScheduleToDrill entries
         drills = request.data.get('drills', [])
@@ -51,6 +91,8 @@ class ListSchedule(APIView):
         # pair()
 
         return Response(status=status.HTTP_201_CREATED)
+
+
 
 class ViewSchedule(APIView):
     parser_classes = (JSONParser,)
