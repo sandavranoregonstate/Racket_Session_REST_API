@@ -16,10 +16,6 @@ from rest_framework.response import Response
 from .models import Drill, ScheduleToDrill
 from .serializers import ScheduleToDrillSerializer
 
-
-# it takes the given location as id and the drills as string
-
-
 from .models import Schedule
 from rest_framework import status
 from rest_framework.views import APIView
@@ -93,26 +89,50 @@ class ListSchedule(APIView):
         return Response(status=status.HTTP_201_CREATED)
 
 
+from .models import Schedule, ScheduleToDrill, Drill
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 class ViewSchedule(APIView):
+
     parser_classes = (JSONParser,)
 
     def get(self, request, id_schedule):
-        # Get the Schedule entry
+        # Get the schedule entry with the same id_schedule as id_schedule from the URL
         try:
             schedule = Schedule.objects.get(id_schedule=id_schedule)
         except Schedule.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        # Get the list of ScheduleToDrill entries
-        schedule_to_drills = ScheduleToDrill.objects.filter(id_schedule=id_schedule)
-        schedule_serializer = ScheduleSerializer(schedule)
-        schedule_to_drill_serializer = ScheduleToDrillSerializer(schedule_to_drills, many=True)
+        # Get a list of “ScheduleToDrill” entry with the same id_schedule as id_schedule from the URL
+        schedule_to_drills = ScheduleToDrill.objects.filter(id_schedule=schedule)
 
-        return Response({
-            'Schedule': schedule_serializer.data,
-            'ScheduleToDrill': schedule_to_drill_serializer.data
-        })
+        print(schedule_to_drills[ 0 ].id_drill.id_drill)
+
+        # Get a list of “Drill” entry with the same id_drill as id_drill from the given list of the “ScheduleToDrill” entry
+        drills = [Drill.objects.get(id_drill=std.id_drill.id_drill) for std in schedule_to_drills]
+
+        # Prepare the response data
+        response_data = {
+            'Schedule': {
+                'id_schedule': schedule.id_schedule,
+                'location': schedule.location.name,
+                'date': schedule.date,
+                'type': schedule.type,
+                'start_time': schedule.start_time
+            },
+            'Drills': [
+                {
+                    'id_drill': drill.id_drill,
+                    'explanation': drill.explanation
+                }
+                for drill in drills
+            ]
+        }
+
+        # Return the “Schedule” entry and list of “Drill” entry
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def delete(self, request, id_schedule):
         try:
