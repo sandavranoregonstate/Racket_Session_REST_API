@@ -133,6 +133,7 @@ class ListPendingFeedback(APIView):
         serializer = FeedbackSerializer(feedbacks, many=True)
         return Response({'items': serializer.data})
 
+
 class ViewPendingFeedback(APIView):
 
     def get(self, request, id_pending_feedback):
@@ -144,8 +145,6 @@ class ViewPendingFeedback(APIView):
 
         serializer = FeedbackSerializer(feedback)
         return Response(serializer.data)
-
-class SubmitFeedback(APIView):
 
     def patch(self, request, id_pending_feedback):
         # Get the Feedback entry
@@ -197,8 +196,6 @@ class ViewCompletedFeedback(APIView):
         serializer = FeedbackSerializer(feedback)
         return Response(serializer.data)
 
-class DeleteFeedback(APIView):
-
     def post(self, request, id_completed_feedback):
         # Get the Feedback entry
         try:
@@ -211,6 +208,7 @@ class DeleteFeedback(APIView):
         feedback.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 from .models import Result
 from .serializers import ResultSerializer
@@ -238,8 +236,6 @@ class ViewPendingResult(APIView):
         serializer = ResultSerializer(result)
         return Response(serializer.data)
 
-class SubmitResult(APIView):
-
     def patch(self, request, id_pending_result):
         # Get the Result entry
         try:
@@ -256,6 +252,7 @@ class SubmitResult(APIView):
         # FindTheCompetitionRating()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 from .models import Result
 from .serializers import ResultSerializer
@@ -284,9 +281,6 @@ class ViewCompletedResult(APIView):
         serializer = ResultSerializer(result)
         return Response(serializer.data)
 
-
-class DeleteResult(APIView):
-
     def post(self, request, id_completed_result):
         # Get the Result entry
         try:
@@ -299,44 +293,6 @@ class DeleteResult(APIView):
         result.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-from .models import Location
-from .serializers import LocationSerializer
-
-class ListLocations(APIView):
-
-    def get(self, request):
-        locations = Location.objects.all()
-        serializer = LocationSerializer(locations, many=True)
-        return Response({'items': serializer.data})
-
-
-from .models import Location
-from .serializers import LocationSerializer
-
-class SubmitLocation(APIView):
-
-    def post(self, request):
-        # Create a Location entry with the specified fields
-        serializer = LocationSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ViewLocation(APIView):
-
-    def get(self, request, id_location):
-        # Get the Location entry
-        try:
-            location = Location.objects.get(id_location=id_location)
-        except Location.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        serializer = LocationSerializer(location)
-        return Response(serializer.data)
-
 
 from .models import Match, Feedback, Result, Schedule
 
