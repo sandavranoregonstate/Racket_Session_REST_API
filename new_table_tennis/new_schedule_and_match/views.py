@@ -183,3 +183,278 @@ class ListCompletedFeedback(APIView):
         feedbacks = Feedback.objects.filter(Q(id_player_a=id_user) | Q(id_player_b=id_user), status='completed')
         serializer = FeedbackSerializer(feedbacks, many=True)
         return Response({'items': serializer.data})
+
+
+class ViewCompletedFeedback(APIView):
+
+    def get(self, request, id_completed_feedback):
+        # Get the Feedback entry
+        try:
+            feedback = Feedback.objects.get(id_feedback=id_completed_feedback, status='completed')
+        except Feedback.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = FeedbackSerializer(feedback)
+        return Response(serializer.data)
+
+class DeleteFeedback(APIView):
+
+    def post(self, request, id_completed_feedback):
+        # Get the Feedback entry
+        try:
+            feedback = Feedback.objects.get(id_feedback=id_completed_feedback, status='completed')
+        except Feedback.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Set the status to "pending"
+        feedback.status = 'pending'
+        feedback.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+from .models import Result
+from .serializers import ResultSerializer
+
+class ListPendingResults(APIView):
+
+    def get(self, request):
+        id_user = request.GET.get('id_user')
+        if id_user is None:
+            return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        results = Result.objects.filter(Q(id_player_victory=id_user), status='pending')
+        serializer = ResultSerializer(results, many=True)
+        return Response({'items': serializer.data})
+
+class ViewPendingResult(APIView):
+
+    def get(self, request, id_pending_result):
+        # Get the Result entry
+        try:
+            result = Result.objects.get(id_result=id_pending_result, status='pending')
+        except Result.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ResultSerializer(result)
+        return Response(serializer.data)
+
+class SubmitResult(APIView):
+
+    def patch(self, request, id_pending_result):
+        # Get the Result entry
+        try:
+            result = Result.objects.get(id_result=id_pending_result, status='pending')
+        except Result.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Update the fields with the input from the request body
+        result.id_player_victory = request.data.get('id_player_victory')
+        result.status = 'completed'
+        result.save()
+
+        # Call the FindTheCompetitionRating method (not implemented here)
+        # FindTheCompetitionRating()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+from .models import Result
+from .serializers import ResultSerializer
+
+class ListCompletedResults(APIView):
+
+    def get(self, request):
+        id_user = request.GET.get('id_user')
+        if id_user is None:
+            return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        results = Result.objects.filter(Q(id_player_victory=id_user), status='completed')
+        serializer = ResultSerializer(results, many=True)
+        return Response({'items': serializer.data})
+
+
+class ViewCompletedResult(APIView):
+
+    def get(self, request, id_completed_result):
+        # Get the Result entry
+        try:
+            result = Result.objects.get(id_result=id_completed_result, status='completed')
+        except Result.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ResultSerializer(result)
+        return Response(serializer.data)
+
+
+class DeleteResult(APIView):
+
+    def post(self, request, id_completed_result):
+        # Get the Result entry
+        try:
+            result = Result.objects.get(id_result=id_completed_result, status='completed')
+        except Result.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Set the status to "pending"
+        result.status = 'pending'
+        result.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+from .models import Location
+from .serializers import LocationSerializer
+
+class ListLocations(APIView):
+
+    def get(self, request):
+        locations = Location.objects.all()
+        serializer = LocationSerializer(locations, many=True)
+        return Response({'items': serializer.data})
+
+
+from .models import Location
+from .serializers import LocationSerializer
+
+class SubmitLocation(APIView):
+
+    def post(self, request):
+        # Create a Location entry with the specified fields
+        serializer = LocationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ViewLocation(APIView):
+
+    def get(self, request, id_location):
+        # Get the Location entry
+        try:
+            location = Location.objects.get(id_location=id_location)
+        except Location.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = LocationSerializer(location)
+        return Response(serializer.data)
+
+
+from .models import Match, Feedback, Result, Schedule
+
+class AcceptMatch(APIView):
+
+    def post(self, request, id_match):
+        # Get the match entry with the same id_match as id_match from the url
+        try:
+            match = Match.objects.get(id_match=id_match)
+        except Match.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        id_user = request.data['id_user']
+
+        # If the id_user is same as the id_player_a
+        if id_user == match.id_player_a.id_user:
+            # If the_current_status_a is equal to “pending”
+            if match.the_current_status_a == 'pending':
+                # Set the_current_status_a to “accepted”
+                match.the_current_status_a = 'accepted'
+                match.save()
+
+                # If the_current_status_b is equal to “accepted”
+                if match.the_current_status_b == 'accepted':
+                    if match.type == 'training':
+                        # Create a “Feedback” entry and set the status of this entry to “pending”
+                        feedback = Feedback(id_match=match, status='pending')
+                        feedback.save()
+                    else:
+                        # Create a “Result” entry and set the status of this entry to “pending”
+                        result = Result(id_match=match, status='pending')
+                        result.save()
+
+                    # For id_player_a and id_player_b, set all of the “Match” entry to “rejected”
+                    Match.objects.filter(Q(id_player_a=match.id_player_a) | Q(id_player_b=match.id_player_b)).exclude(id_match=id_match).update(the_current_status_a='rejected', the_current_status_b='rejected')
+
+                    # For id_player_a and id_player_b, delete all of the “Schedule” entry at the same time
+                    Schedule.objects.filter(Q(id_user=match.id_player_a) | Q(id_user=match.id_player_b)).delete()
+
+        return Response(status=status.HTTP_200_OK)
+
+from .models import Match
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class RejectMatch(APIView):
+
+    def post(self, request, id_match):
+        # From the database get the “Match” entry that has the id_match equal to the request.id_match
+        try:
+            match = Match.objects.get(id_match=id_match)
+        except Match.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        id_user = request.data['id_user']
+
+        # If the id_player_a is equal to the request.id_user
+        if id_user == match.id_player_a.id_user:
+            # Set the_current_status_a to “rejected”
+            match.the_current_status_a = 'rejected'
+            match.save()
+
+        # If the id_player_b is equal to the request.id_user
+        if id_user == match.id_player_b.id_user:
+            # Set the_current_status_b to “rejected”
+            match.the_current_status_b = 'rejected'
+            match.save()
+
+        return Response(status=status.HTTP_200_OK)
+
+
+from .models import Match, Feedback, Result
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class DeleteMatch(APIView):
+
+    def post(self, request, id_match):
+        # From the database get the “Match” entry that has the id_match equal to the request.id_match
+        try:
+            match = Match.objects.get(id_match=id_match)
+        except Match.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        id_user = request.data['id_user']
+
+        # If the id_player_a is equal to the request.id_user
+        if id_user == match.id_player_a.id_user:
+            if match.the_current_status_a == 'accepted':
+                if match.type == 'competitive':
+                    # Set the_current_status_a to “deleted”
+                    match.the_current_status_a = 'deleted'
+                    match.save()
+                    # Delete the “Result” entry that has the same “id_match”
+                    Result.objects.filter(id_match=match).delete()
+                else:
+                    # Set the_current_status_a to “deleted”
+                    match.the_current_status_a = 'deleted'
+                    match.save()
+                    # Delete the “Feedback” entry that has the same “id_match”
+                    Feedback.objects.filter(id_match=match).delete()
+
+        # If the id_player_b is equal to the request.id_user
+        if id_user == match.id_player_b.id_user:
+            if match.the_current_status_b == 'accepted':
+                if match.type == 'competitive':
+                    # Set the_current_status_b to “deleted”
+                    match.the_current_status_b = 'deleted'
+                    match.save()
+                    # Delete the “Result” entry that has the same “id_match”
+                    Result.objects.filter(id_match=match).delete()
+                else:
+                    # Set the_current_status_b to “deleted”
+                    match.the_current_status_b = 'deleted'
+                    match.save()
+                    # Delete the “Feedback” entry that has the same “id_match”
+                    Feedback.objects.filter(id_match=match).delete()
+
+        return Response(status=status.HTTP_200_OK)
