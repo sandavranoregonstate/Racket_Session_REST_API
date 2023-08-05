@@ -22,6 +22,9 @@ class TheUser(models.Model):
     backhand_block_feedback = models.FloatField()
     personal_feedback = models.FloatField()
 
+    class Meta:
+        db_table = 'new_schedule_and_match_user'
+
 class Match(models.Model):
     id_match = models.AutoField(primary_key=True)
     id_player_a = models.ForeignKey(TheUser, related_name='player_a', on_delete=models.CASCADE)

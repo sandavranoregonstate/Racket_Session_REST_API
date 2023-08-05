@@ -49,3 +49,16 @@ class LocationSerializer(serializers.ModelSerializer):
         model = Location
         fields = '__all__'
 
+from .models import TheUser
+
+class TheUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TheUser
+        fields = '__all__'
+
+from .models import Drill
+
+class DrillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Drill
+        fields = '__all__'
