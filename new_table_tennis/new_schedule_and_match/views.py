@@ -260,9 +260,9 @@ class ListCompletedFeedback(APIView):
         if id_user is None:
             return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        feedbacks = Feedback.objects.filter(Q(id_player_a=id_user) | Q(id_player_b=id_user), status='completed')
+        feedbacks = Feedback.objects.filter(Q(id_player_a=id_user) , status='completed')
         serializer = FeedbackSerializer(feedbacks, many=True)
-        return Response({'items': serializer.data})
+        return Response(serializer.data)
 
 
 class ViewCompletedFeedback(APIView):
