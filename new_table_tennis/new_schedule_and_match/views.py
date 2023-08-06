@@ -303,7 +303,7 @@ class ListPendingResults(APIView):
 
         results = Result.objects.filter(Q(id_player_victory=id_user), status='pending')
         serializer = ResultSerializer(results, many=True)
-        return Response({'items': serializer.data})
+        return Response(serializer.data)
 
 class ViewPendingResult(APIView):
 
@@ -325,7 +325,7 @@ class ViewPendingResult(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         # Update the fields with the input from the request body
-        result.id_player_victory = request.data.get('id_player_victory')
+        result.id_player_victory = TheUser.objects.get( id_user = request.data.get('id_player_victory') )
         result.status = 'completed'
         result.save()
 
