@@ -173,13 +173,32 @@ class ViewMatch(APIView):
 
         # Get the list of MatchToDrill entries
         match_to_drills = MatchToDrill.objects.filter(id_match=id_match)
-        match_serializer = MatchSerializer(match)
-        match_to_drill_serializer = MatchToDrillSerializer(match_to_drills, many=True)
 
-        return Response({
-            'Match': match_serializer.data,
-            'MatchToDrill': match_to_drill_serializer.data
-        })
+        drills = [Drill.objects.get(id_drill=std.id_drill.id_drill) for std in match_to_drills]
+
+        # Prepare the response data
+        response_data = {
+            'Match': {
+                'id_player_a': match.id_player_a.id_user,
+                'id_player_b': match.id_player_b.id_user,
+                'location': match.date,
+                'the_current_status_a': match.the_current_status_a,
+                'the_current_status_b': match.the_current_status_b ,
+                "date" : match.date ,
+                "type" : match.type ,
+                "start_time" : 10
+            },
+            'Drills': [
+                {
+                    'id_drill': drill.id_drill,
+                    'explanation': drill.explanation
+                }
+                for drill in drills
+            ]
+        }
+
+        # Return the “Schedule” entry and list of “Drill” entry
+        return Response(response_data, status=status.HTTP_200_OK)
 
 from .models import Feedback
 from .serializers import FeedbackSerializer
