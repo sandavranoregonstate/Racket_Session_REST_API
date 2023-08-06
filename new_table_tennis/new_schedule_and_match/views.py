@@ -301,7 +301,11 @@ class ListPendingResults(APIView):
         if id_user is None:
             return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        results = Result.objects.filter(Q(id_player_victory=id_user), status='pending')
+        results = Result.objects.filter(
+            status='pending',
+            id_match__in=Match.objects.filter(Q(id_player_a__id_user=id_user) | Q(id_player_b__id_user=id_user))
+        )
+
         serializer = ResultSerializer(results, many=True)
         return Response(serializer.data)
 
@@ -345,10 +349,13 @@ class ListCompletedResults(APIView):
         if id_user is None:
             return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        results = Result.objects.filter(Q(id_player_victory=id_user), status='completed')
-        serializer = ResultSerializer(results, many=True)
-        return Response({'items': serializer.data})
+        results = Result.objects.filter(
+            status='completed',
+            id_match__in=Match.objects.filter(Q(id_player_a__id_user=id_user) | Q(id_player_b__id_user=id_user))
+        )
 
+        serializer = ResultSerializer(results, many=True)
+        return Response(serializer.data)
 
 class ViewCompletedResult(APIView):
 
