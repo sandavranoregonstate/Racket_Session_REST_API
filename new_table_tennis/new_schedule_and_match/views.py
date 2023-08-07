@@ -52,6 +52,8 @@ class ListSchedule(APIView):
 
     def post(self, request):
 
+        print( request.data )
+
         # Extracting the data from the request body
         id_user = request.data['id_user']
         location_string = request.data['location']
@@ -179,6 +181,7 @@ class ViewMatch(APIView):
         # Prepare the response data
         response_data = {
             'Match': {
+                "id_match" : id_match ,
                 'id_player_a': match.id_player_a.id_user,
                 'id_player_b': match.id_player_b.id_user,
                 'location': match.date,
