@@ -110,19 +110,17 @@ class ViewSchedule(APIView):
         # Get a list of “ScheduleToDrill” entry with the same id_schedule as id_schedule from the URL
         schedule_to_drills = ScheduleToDrill.objects.filter(id_schedule=schedule)
 
-        print(schedule_to_drills[ 0 ].id_drill.id_drill)
-
         # Get a list of “Drill” entry with the same id_drill as id_drill from the given list of the “ScheduleToDrill” entry
         drills = [Drill.objects.get(id_drill=std.id_drill.id_drill) for std in schedule_to_drills]
 
         # Prepare the response data
         response_data = {
             'Schedule': {
-                'id_schedule': schedule.id_schedule,
+                'id_schedule': id_schedule,
                 'location': schedule.location.name,
                 'date': schedule.date,
                 'type': schedule.type,
-                'start_time': schedule.start_time
+                'start_time': 10
             },
             'Drills': [
                 {
@@ -396,10 +394,11 @@ class AcceptMatch(APIView):
         except Match.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        id_user = request.data['id_user']
+        id_user = int( request.data['id_user'])
 
         # If the id_user is same as the id_player_a
         if id_user == match.id_player_a.id_user:
+            print( 2 )
             # If the_current_status_a is equal to “pending”
             if match.the_current_status_a == 'pending':
                 # Set the_current_status_a to “accepted”
@@ -409,19 +408,37 @@ class AcceptMatch(APIView):
                 # If the_current_status_b is equal to “accepted”
                 if match.the_current_status_b == 'accepted':
                     if match.type == 'training':
+
                         # Create a “Feedback” entry and set the status of this entry to “pending”
-                        feedback = Feedback(id_match=match, status='pending')
+                        feedback = Feedback(id_match=match , id_player_a = match.id_player_b , id_player_b = match.id_player_a , status='pending')
+                        feedback.save()
+                        feedback = Feedback(id_match=match , id_player_a = match.id_player_a , id_player_b = match.id_player_b , status='pending')
+                        feedback.save()
+
+                    else:
+                        # Create a “Result” entry and set the status of this entry to “pending”
+                        the_result = Result(id_match=match, status='pending' , id_player_victory = match.id_player_a )
+                        the_result.save()
+
+        elif id_user == match.id_player_b.id_user:
+
+            if match.the_current_status_b == 'pending':
+                # Set the_current_status_a to “accepted”
+                match.the_current_status_b = 'accepted'
+                match.save()
+
+                # If the_current_status_b is equal to “accepted”
+                if match.the_current_status_a == 'accepted':
+                    if match.type == 'training':
+                        # Create a “Feedback” entry and set the status of this entry to “pending”
+                        feedback = Feedback(id_match=match, id_player_a=match.id_player_b, id_player_b=match.id_player_a, status='pending')
+                        feedback.save()
+                        feedback = Feedback(id_match=match, id_player_a=match.id_player_a, id_player_b=match.id_player_b, status='pending')
                         feedback.save()
                     else:
                         # Create a “Result” entry and set the status of this entry to “pending”
-                        result = Result(id_match=match, status='pending')
-                        result.save()
-
-                    # For id_player_a and id_player_b, set all of the “Match” entry to “rejected”
-                    Match.objects.filter(Q(id_player_a=match.id_player_a) | Q(id_player_b=match.id_player_b)).exclude(id_match=id_match).update(the_current_status_a='rejected', the_current_status_b='rejected')
-
-                    # For id_player_a and id_player_b, delete all of the “Schedule” entry at the same time
-                    Schedule.objects.filter(Q(id_user=match.id_player_a) | Q(id_user=match.id_player_b)).delete()
+                        the_result = Result(id_match=match, status='pending' , id_player_victory = match.id_player_a )
+                        the_result.save()
 
         return Response(status=status.HTTP_200_OK)
 
@@ -454,7 +471,6 @@ class RejectMatch(APIView):
             match.save()
 
         return Response(status=status.HTTP_200_OK)
-
 
 from .models import Match, Feedback, Result
 from rest_framework import status
