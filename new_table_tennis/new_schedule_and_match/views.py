@@ -163,7 +163,7 @@ class ViewMatch(APIView):
                 "id_match" : id_match ,
                 'id_player_a': match.id_player_a.id_user,
                 'id_player_b': match.id_player_b.id_user,
-                'location': match.date,
+                'location': match.location.id_location,
                 'the_current_status_a': match.the_current_status_a,
                 'the_current_status_b': match.the_current_status_b ,
                 "date" : match.date ,
@@ -179,6 +179,8 @@ class ViewMatch(APIView):
             ]
         }
 
+
+        print( response_data )
         # Return the “Schedule” entry and list of “Drill” entry
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -191,7 +193,7 @@ class ListPendingFeedback(APIView):
         if id_user is None:
             return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        feedbacks = Feedback.objects.filter( Q( id_player_a=id_user ) , status='pending')
+        feedbacks = Feedback.objects.filter( id_player_a = id_user , status='pending')
         serializer = FeedbackSerializer(feedbacks, many=True)
         return Response(serializer.data)
 
@@ -240,7 +242,7 @@ class ListCompletedFeedback(APIView):
         if id_user is None:
             return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        feedbacks = Feedback.objects.filter(Q(id_player_a=id_user) , status='completed')
+        feedbacks = Feedback.objects.filter(id_player_a = id_user , status='completed')
         serializer = FeedbackSerializer(feedbacks, many=True)
         return Response(serializer.data)
 
