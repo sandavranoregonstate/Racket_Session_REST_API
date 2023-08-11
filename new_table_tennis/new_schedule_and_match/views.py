@@ -1,23 +1,10 @@
-from django.shortcuts import render
-
-# Create your views here.
-
-from django.http import JsonResponse, HttpResponse
-from rest_framework import status
-from rest_framework.views import APIView
 from rest_framework.parsers import JSONParser
-from .models import TheUser , Schedule, Location
-from .serializers import ScheduleSerializer
+from .models import TheUser , Schedule, Location , Match , ScheduleToDrill , Drill , Result , MatchToDrill , Feedback
+from .serializers import ScheduleToDrillSerializer , ResultSerializer ,  MatchSerializer , FeedbackSerializer
 
+from django.db.models import Q
 from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 
-from .models import Drill, ScheduleToDrill
-from .serializers import ScheduleToDrillSerializer
-
-from .models import Schedule
-from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -91,10 +78,7 @@ class ListSchedule(APIView):
         return Response(status=status.HTTP_201_CREATED)
 
 
-from .models import Schedule, ScheduleToDrill, Drill
-from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
+
 
 class ViewSchedule(APIView):
 
@@ -143,9 +127,7 @@ class ViewSchedule(APIView):
         schedule.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-from django.db.models import Q
-from .models import Match
-from .serializers import MatchSerializer
+
 
 class ListMatch(APIView):
 
@@ -159,8 +141,7 @@ class ListMatch(APIView):
         return Response(serializer.data)
 
 
-from .models import MatchToDrill
-from .serializers import MatchToDrillSerializer
+
 
 class ViewMatch(APIView):
 
@@ -201,8 +182,7 @@ class ViewMatch(APIView):
         # Return the “Schedule” entry and list of “Drill” entry
         return Response(response_data, status=status.HTTP_200_OK)
 
-from .models import Feedback
-from .serializers import FeedbackSerializer
+
 
 class ListPendingFeedback(APIView):
 
@@ -251,8 +231,7 @@ class ViewPendingFeedback(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-from .models import Feedback
-from .serializers import FeedbackSerializer
+
 
 class ListCompletedFeedback(APIView):
 
@@ -291,9 +270,6 @@ class ViewCompletedFeedback(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-from .models import Result
-from .serializers import ResultSerializer
 
 class ListPendingResults(APIView):
 
@@ -340,9 +316,6 @@ class ViewPendingResult(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-from .models import Result
-from .serializers import ResultSerializer
-
 class ListCompletedResults(APIView):
 
     def get(self, request):
@@ -383,11 +356,58 @@ class ViewCompletedResult(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-from .models import Match, Feedback, Result, Schedule
+
+def set_match_to_rejected( match , id_player_a , id_player_b , date , time ) :
+
+    # 4 different permutations , Match.id_player_a = id_player_a , Match.id_player_b = player_b , Match.id_player_a = id_player_b , Match.id_player_b = id_player_a
+    list_one = Match.objects.filter( id_player_a = id_player_a , date = date , start_time = time  )
+    list_two = Match.objects.filter(id_player_b=id_player_b, date=date, start_time=time)
+    list_three = Match.objects.filter(id_player_a=id_player_b, date=date, start_time=time)
+    list_four = Match.objects.filter( id_player_b = id_player_a , date = date , start_time = time )
+
+    print(list_one , list_two , list_three , list_four )
+
+    for x in list_one :
+        if x != match :
+            x.the_current_status_a = "rejected"
+            x.save()
+
+    for x in list_two :
+
+        if x != match :
+            x.the_current_status_b = "rejected"
+            x.save()
+
+    for x in list_three :
+
+        if x != match :
+            x.the_current_status_a = "rejected"
+            x.save()
+
+    for x in list_four :
+        if x != match :
+            x.the_current_status_b = "rejected"
+            x.save()
+
+def delete_all_schedule_entry( id_player_a , id_player_b , date , time  ) :
+
+    # 2 different permutations , Schedule.id_user = id_player_a , Schedule.id_user = id_player_b
+
+    list_one = Schedule.objects.filter( id_user = id_player_a , date = date , start_time = time )
+    list_two = Schedule.objects.filter( id_user = id_player_b , date = date , start_time = time )
+
+    print(list_one , list_two  )
+
+    for x in list_one :
+        x.delete()
+
+    for x in list_two :
+        x.delete()
 
 class AcceptMatch(APIView):
 
     def post(self, request, id_match):
+
         # Get the match entry with the same id_match as id_match from the url
         try:
             match = Match.objects.get(id_match=id_match)
@@ -395,62 +415,54 @@ class AcceptMatch(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         id_user = int( request.data['id_user'])
-
-        # If the id_user is same as the id_player_a
         if id_user == match.id_player_a.id_user:
-            print( 2 )
-            # If the_current_status_a is equal to “pending”
+
             if match.the_current_status_a == 'pending':
-                # Set the_current_status_a to “accepted”
                 match.the_current_status_a = 'accepted'
                 match.save()
 
-                # If the_current_status_b is equal to “accepted”
                 if match.the_current_status_b == 'accepted':
-                    if match.type == 'training':
 
-                        # Create a “Feedback” entry and set the status of this entry to “pending”
+                    if match.type == 'training':
                         feedback = Feedback(id_match=match , id_player_a = match.id_player_b , id_player_b = match.id_player_a , status='pending')
                         feedback.save()
                         feedback = Feedback(id_match=match , id_player_a = match.id_player_a , id_player_b = match.id_player_b , status='pending')
                         feedback.save()
 
                     else:
-                        # Create a “Result” entry and set the status of this entry to “pending”
                         the_result = Result(id_match=match, status='pending' , id_player_victory = match.id_player_a )
                         the_result.save()
+
+                    set_match_to_rejected( match , match.id_player_a, match.id_player_b, match.date, match.start_time )
+                    delete_all_schedule_entry(match.id_player_a, match.id_player_b, match.date, match.start_time)
 
         elif id_user == match.id_player_b.id_user:
 
             if match.the_current_status_b == 'pending':
-                # Set the_current_status_a to “accepted”
                 match.the_current_status_b = 'accepted'
                 match.save()
 
-                # If the_current_status_b is equal to “accepted”
                 if match.the_current_status_a == 'accepted':
+
                     if match.type == 'training':
-                        # Create a “Feedback” entry and set the status of this entry to “pending”
                         feedback = Feedback(id_match=match, id_player_a=match.id_player_b, id_player_b=match.id_player_a, status='pending')
                         feedback.save()
                         feedback = Feedback(id_match=match, id_player_a=match.id_player_a, id_player_b=match.id_player_b, status='pending')
                         feedback.save()
+
                     else:
-                        # Create a “Result” entry and set the status of this entry to “pending”
                         the_result = Result(id_match=match, status='pending' , id_player_victory = match.id_player_a )
                         the_result.save()
 
-        return Response(status=status.HTTP_200_OK)
+                    set_match_to_rejected( match , match.id_player_a, match.id_player_b, match.date, match.start_time )
+                    delete_all_schedule_entry( match.id_player_a , match.id_player_b , match.date , match.start_time )
 
-from .models import Match
-from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
+        return Response(status=status.HTTP_200_OK)
 
 class RejectMatch(APIView):
 
     def post(self, request, id_match):
-        # From the database get the “Match” entry that has the id_match equal to the request.id_match
+
         try:
             match = Match.objects.get(id_match=id_match)
         except Match.DoesNotExist:
@@ -458,29 +470,19 @@ class RejectMatch(APIView):
 
         id_user = request.data['id_user']
 
-        # If the id_player_a is equal to the request.id_user
         if id_user == match.id_player_a.id_user:
-            # Set the_current_status_a to “rejected”
             match.the_current_status_a = 'rejected'
             match.save()
 
-        # If the id_player_b is equal to the request.id_user
         if id_user == match.id_player_b.id_user:
-            # Set the_current_status_b to “rejected”
             match.the_current_status_b = 'rejected'
             match.save()
 
         return Response(status=status.HTTP_200_OK)
 
-from .models import Match, Feedback, Result
-from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-
 class DeleteMatch(APIView):
 
     def post(self, request, id_match):
-        # From the database get the “Match” entry that has the id_match equal to the request.id_match
         try:
             match = Match.objects.get(id_match=id_match)
         except Match.DoesNotExist:
@@ -488,36 +490,28 @@ class DeleteMatch(APIView):
 
         id_user = request.data['id_user']
 
-        # If the id_player_a is equal to the request.id_user
         if id_user == match.id_player_a.id_user:
             if match.the_current_status_a == 'accepted':
                 if match.type == 'competitive':
-                    # Set the_current_status_a to “deleted”
                     match.the_current_status_a = 'deleted'
                     match.save()
-                    # Delete the “Result” entry that has the same “id_match”
                     Result.objects.filter(id_match=match).delete()
                 else:
-                    # Set the_current_status_a to “deleted”
                     match.the_current_status_a = 'deleted'
                     match.save()
-                    # Delete the “Feedback” entry that has the same “id_match”
                     Feedback.objects.filter(id_match=match).delete()
 
-        # If the id_player_b is equal to the request.id_user
         if id_user == match.id_player_b.id_user:
             if match.the_current_status_b == 'accepted':
                 if match.type == 'competitive':
-                    # Set the_current_status_b to “deleted”
                     match.the_current_status_b = 'deleted'
                     match.save()
-                    # Delete the “Result” entry that has the same “id_match”
                     Result.objects.filter(id_match=match).delete()
+
                 else:
-                    # Set the_current_status_b to “deleted”
                     match.the_current_status_b = 'deleted'
                     match.save()
-                    # Delete the “Feedback” entry that has the same “id_match”
                     Feedback.objects.filter(id_match=match).delete()
 
         return Response(status=status.HTTP_200_OK)
+
