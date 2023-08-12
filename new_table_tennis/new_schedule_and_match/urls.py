@@ -89,3 +89,11 @@ from .views import DeleteMatch
 urlpatterns += [
     path('matches/<int:id_match>/delete', DeleteMatch.as_view(), name='delete-match'),
 ]
+
+# urls.py
+from django.urls import path
+from .views import LocationListView
+
+urlpatterns += [
+    path('locations/', LocationListView.as_view(), name='location-list'),
+]

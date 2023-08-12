@@ -62,3 +62,13 @@ class DrillSerializer(serializers.ModelSerializer):
     class Meta:
         model = Drill
         fields = '__all__'
+
+
+# serializers.py
+from rest_framework import serializers
+from .models import Location
+
+class LocationNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ('name',)

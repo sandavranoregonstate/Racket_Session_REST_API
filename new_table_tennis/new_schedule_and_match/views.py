@@ -75,10 +75,35 @@ class ListSchedule(APIView):
         # Call the Pair method (not implemented here)
         # pair()
 
+        pair(schedule)
+
         return Response(status=status.HTTP_201_CREATED)
 
 
+def create_the_match_entry( the_input , schedule ) :
+    this_match = Match.objects.create( id_player_a = the_input.id_user , id_player_b = schedule.id_user , location = the_input.location , the_current_status_a = "pending" , the_current_status_b = "pending" , date = the_input.date , type = the_input.type , start_time = the_input.start_time )
+    this_match.save()
 
+    print( this_match)
+
+# the_input = Schedule entry
+def pair( the_input : Schedule ) :
+
+    date = the_input.date
+    start_time = the_input.start_time
+    type = the_input.type
+    location = the_input.location
+    id_schedule = the_input.id_schedule
+
+    # get all of the Schedule entry with the matching set of the criteria
+
+    list_schedule = Schedule.objects.filter( date = date , start_time = start_time , type = type , location = location )
+    list_schedule = [ x for x in list_schedule if x.id_schedule != id_schedule ]
+
+    # create a Match entry for this schedule and every schedule
+
+    for schedule in list_schedule :
+        create_the_match_entry(the_input , schedule)
 
 class ViewSchedule(APIView):
 
@@ -132,15 +157,48 @@ class ViewSchedule(APIView):
 class ListMatch(APIView):
 
     def get(self, request):
+
         id_user = request.GET.get('id_user')
-        if id_user is None:
-            return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
+        type_current = request.GET.get('type')
 
-        matches = Match.objects.filter(Q(id_player_a=id_user) | Q(id_player_b=id_user))
+        # two of the users have accepted the match, it is a session
+        if type_current == "is_session":
+            matches = Match.objects.filter(Q(the_current_status_a='accepted', the_current_status_b='accepted') |
+                                           Q(the_current_status_a='accepted', the_current_status_b='accepted'))
+
+        # the current player has neither accepted nor rejected the match
+        elif type_current == "pending":
+            matches = Match.objects.filter(Q(id_player_a=id_user, the_current_status_a='pending') |
+                                           Q(id_player_b=id_user, the_current_status_b='pending'))
+
+        # the current player has accepted the match
+        elif type_current == "accepted":
+            matches = Match.objects.filter(
+                Q(id_player_a=id_user, the_current_status_a='accepted', the_current_status_b = 'rejected' ) |
+                Q(id_player_a=id_user, the_current_status_a='accepted', the_current_status_b='pending') |
+
+                Q(id_player_b=id_user, the_current_status_b='accepted', the_current_status_a ='rejected') |
+                Q(id_player_b=id_user, the_current_status_b='accepted', the_current_status_a='pending')
+
+            )
+
+        # the current player has rejected the match
+        elif type_current == "rejected":
+            matches = Match.objects.filter(Q(id_player_a=id_user, the_current_status_a='rejected') |
+                                           Q(id_player_b=id_user, the_current_status_b='rejected'))
+
+        else:
+            # Handle the case where type_current doesn't match any known type
+            matches = []
+
+        # Now, matches will contain the queryset with the relevant results based on type_current
+
+        print(matches)
+
         serializer = MatchSerializer(matches, many=True)
+        
+        print( serializer.data)
         return Response(serializer.data)
-
-
 
 
 class ViewMatch(APIView):
@@ -419,7 +477,7 @@ class AcceptMatch(APIView):
         id_user = int( request.data['id_user'])
         if id_user == match.id_player_a.id_user:
 
-            if match.the_current_status_a == 'pending':
+            if match.the_current_status_a == 'pending' or match.the_current_status_a == 'rejected':
                 match.the_current_status_a = 'accepted'
                 match.save()
 
@@ -440,7 +498,7 @@ class AcceptMatch(APIView):
 
         elif id_user == match.id_player_b.id_user:
 
-            if match.the_current_status_b == 'pending':
+            if match.the_current_status_b == 'pending' or match.the_current_status_b == 'rejected' :
                 match.the_current_status_b = 'accepted'
                 match.save()
 
@@ -516,4 +574,18 @@ class DeleteMatch(APIView):
                     Feedback.objects.filter(id_match=match).delete()
 
         return Response(status=status.HTTP_200_OK)
+
+
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Location
+from .serializers import LocationNameSerializer
+
+class LocationListView(APIView):
+    def get(self, request):
+        locations = Location.objects.all()
+        serializer = LocationNameSerializer(locations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
