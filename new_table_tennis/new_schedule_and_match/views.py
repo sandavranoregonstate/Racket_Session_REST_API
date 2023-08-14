@@ -1,6 +1,6 @@
 from rest_framework.parsers import JSONParser
-from .models import TheUser , Schedule, Location , Match , ScheduleToDrill , Drill , Result , MatchToDrill , Feedback
-from .serializers import ScheduleToDrillSerializer , ResultSerializer ,  MatchSerializer , FeedbackSerializer
+from .models import TheUser , Schedule, Location , Match , Result , Feedback
+from .serializers import ResultSerializer ,  MatchSerializer , FeedbackSerializer
 
 from django.db.models import Q
 from rest_framework import status
@@ -58,20 +58,6 @@ class ListSchedule(APIView):
         schedule = Schedule(id_user= TheUser.objects.get( id_user = id_user ), location=location, date=date, type=type, start_time=start_time)
         schedule.save()
 
-        # Create the ScheduleToDrill entries
-        drills = request.data.get('drills', [])
-        for drill_string in drills:
-            drill = Drill.objects.get(explanation=drill_string)
-            schedule_to_drill_data = {
-                'id_drill': drill.id_drill,
-                'id_schedule': schedule.id_schedule
-            }
-            schedule_to_drill_serializer = ScheduleToDrillSerializer(data=schedule_to_drill_data)
-            if schedule_to_drill_serializer.is_valid():
-                schedule_to_drill_serializer.save()
-            else:
-                return Response(schedule_to_drill_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         # Call the Pair method (not implemented here)
         # pair()
 
@@ -116,12 +102,6 @@ class ViewSchedule(APIView):
         except Schedule.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        # Get a list of “ScheduleToDrill” entry with the same id_schedule as id_schedule from the URL
-        schedule_to_drills = ScheduleToDrill.objects.filter(id_schedule=schedule)
-
-        # Get a list of “Drill” entry with the same id_drill as id_drill from the given list of the “ScheduleToDrill” entry
-        drills = [Drill.objects.get(id_drill=std.id_drill.id_drill) for std in schedule_to_drills]
-
         # Prepare the response data
         response_data = {
             'Schedule': {
@@ -131,13 +111,6 @@ class ViewSchedule(APIView):
                 'type': schedule.type,
                 'start_time': 10
             },
-            'Drills': [
-                {
-                    'id_drill': drill.id_drill,
-                    'explanation': drill.explanation
-                }
-                for drill in drills
-            ]
         }
 
         # Return the “Schedule” entry and list of “Drill” entry
@@ -152,8 +125,6 @@ class ViewSchedule(APIView):
         schedule.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-
 class ListMatch(APIView):
 
     def get(self, request):
@@ -163,8 +134,8 @@ class ListMatch(APIView):
 
         # two of the users have accepted the match, it is a session
         if type_current == "is_session":
-            matches = Match.objects.filter(Q(the_current_status_a='accepted', the_current_status_b='accepted') |
-                                           Q(the_current_status_a='accepted', the_current_status_b='accepted'))
+            matches = Match.objects.filter(Q(id_player_a = id_user , the_current_status_a='accepted', the_current_status_b='accepted') |
+                                           Q(id_player_b = id_user , the_current_status_a='accepted', the_current_status_b='accepted'))
 
         # the current player has neither accepted nor rejected the match
         elif type_current == "pending":
@@ -201,6 +172,53 @@ class ListMatch(APIView):
         return Response(serializer.data)
 
 
+class MatchList(APIView):
+
+    def get(self, request):
+
+        id_user = request.GET.get('id_user')
+        type_current = request.GET.get('type')
+
+        # two of the users have accepted the match, it is a session
+        if type_current == "is_session":
+            matches = Match.objects.filter(Q(the_current_status_a='accepted', the_current_status_b='accepted') |
+                                           Q(the_current_status_a='accepted', the_current_status_b='accepted'))
+
+        # the current player has neither accepted nor rejected the match
+        elif type_current == "pending":
+            matches = Match.objects.filter(Q(id_player_a=id_user, the_current_status_a='pending') |
+                                           Q(id_player_b=id_user, the_current_status_b='pending'))
+
+        # the current player has accepted the match
+        elif type_current == "accepted":
+            matches = Match.objects.filter(
+                Q(id_player_a=id_user, the_current_status_a='accepted', the_current_status_b='rejected') |
+                Q(id_player_a=id_user, the_current_status_a='accepted', the_current_status_b='pending') |
+
+                Q(id_player_b=id_user, the_current_status_b='accepted', the_current_status_a='rejected') |
+                Q(id_player_b=id_user, the_current_status_b='accepted', the_current_status_a='pending')
+
+            )
+
+        # the current player has rejected the match
+        elif type_current == "rejected":
+            matches = Match.objects.filter(Q(id_player_a=id_user, the_current_status_a='rejected') |
+                                           Q(id_player_b=id_user, the_current_status_b='rejected'))
+
+        else:
+            # Handle the case where type_current doesn't match any known type
+            matches = []
+
+        # Now, matches will contain the queryset with the relevant results based on type_current
+
+        print(matches)
+
+        serializer = MatchSerializer(matches, many=True)
+
+        print(serializer.data)
+        return Response(serializer.data)
+
+
 class ViewMatch(APIView):
 
     def get(self, request, id_match):
@@ -210,37 +228,14 @@ class ViewMatch(APIView):
         except Match.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        # Get the list of MatchToDrill entries
-        match_to_drills = MatchToDrill.objects.filter(id_match=id_match)
-
-        drills = [Drill.objects.get(id_drill=std.id_drill.id_drill) for std in match_to_drills]
-
-        # Prepare the response data
-        response_data = {
-            'Match': {
-                "id_match" : id_match ,
-                'id_player_a': match.id_player_a.id_user,
-                'id_player_b': match.id_player_b.id_user,
-                'location': match.location.id_location,
-                'the_current_status_a': match.the_current_status_a,
-                'the_current_status_b': match.the_current_status_b ,
-                "date" : match.date ,
-                "type" : match.type ,
-                "start_time" : 10
-            },
-            'Drills': [
-                {
-                    'id_drill': drill.id_drill,
-                    'explanation': drill.explanation
-                }
-                for drill in drills
-            ]
-        }
 
 
-        print( response_data )
+
+        serializer = MatchSerializer(match )
+
+
         # Return the “Schedule” entry and list of “Drill” entry
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 

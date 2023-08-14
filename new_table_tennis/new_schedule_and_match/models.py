@@ -64,17 +64,4 @@ class Schedule(models.Model):
     type = models.CharField(max_length=255, choices=[('training', 'training'), ('competitive', 'competitive')])
     start_time = models.IntegerField(choices=[(i, i) for i in range(6, 21)])
 
-class Drill(models.Model):
-    id_drill = models.AutoField(primary_key=True)
-    explanation = models.CharField(max_length=255)
 
-class ScheduleToDrill(models.Model):
-    id_schedule_to_drill = models.AutoField(primary_key=True)
-    id_drill = models.ForeignKey(Drill, on_delete=models.CASCADE)
-    id_schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
-
-class MatchToDrill(models.Model):
-    id_match_to_drill = models.AutoField(primary_key=True)
-    id_drill = models.ForeignKey(Drill, on_delete=models.CASCADE)
-    id_match = models.ForeignKey(Match, on_delete=models.CASCADE)
-    id_player = models.ForeignKey(TheUser, on_delete=models.CASCADE)
