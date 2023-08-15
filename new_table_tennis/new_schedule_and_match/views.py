@@ -606,7 +606,7 @@ class TheRegisterUserView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response({
-                'user_id': serializer.instance.id,
+                'user_id': serializer.instance.id_user,
                 'email': serializer.instance.email,
                 'name': serializer.instance.name,
             }, status=status.HTTP_201_CREATED)

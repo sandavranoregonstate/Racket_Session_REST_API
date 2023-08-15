@@ -54,17 +54,17 @@ class TheUser(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=255)
     # ... [rest of your fields here]
 
-    forehand_rubber_type = models.CharField(max_length=255, choices=[('short or long pimples', 'short or long pimples'),('inverted', 'inverted')])
-    backhand_rubber_type = models.CharField(max_length=255, choices=[('short or long pimples', 'short or long pimples'),('inverted', 'inverted')])
-    competition_rating = models.IntegerField()
-    real_world_rating = models.IntegerField()
-    serve_feedback = models.FloatField()
-    receive_feedback = models.FloatField()
-    forehand_loop_feedback = models.FloatField()
-    backhand_loop_feedback = models.FloatField()
-    forehand_block_feedback = models.FloatField()
-    backhand_block_feedback = models.FloatField()
-    personal_feedback = models.FloatField()
+    forehand_rubber_type = models.CharField(max_length=255, choices=[('short or long pimples', 'short or long pimples'),('inverted', 'inverted')],  default = ('inverted', 'inverted'))
+    backhand_rubber_type = models.CharField(max_length=255, choices=[('short or long pimples', 'short or long pimples'),('inverted', 'inverted')] , default = ('inverted', 'inverted'))
+    competition_rating = models.IntegerField( default = 1 )
+    real_world_rating = models.IntegerField( default = 1 )
+    serve_feedback = models.FloatField(default = 1 )
+    receive_feedback = models.FloatField(default = 1 )
+    forehand_loop_feedback = models.FloatField(default = 1 )
+    backhand_loop_feedback = models.FloatField(default = 1 )
+    forehand_block_feedback = models.FloatField(default = 1 )
+    backhand_block_feedback = models.FloatField(default = 1 )
+    personal_feedback = models.FloatField(default = 1 )
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  # for admin access
