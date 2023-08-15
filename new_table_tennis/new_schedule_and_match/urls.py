@@ -12,10 +12,10 @@ urlpatterns += [
     path('schedules/<int:id_schedule>/', ViewSchedule.as_view(), name='view-schedule'),
 ]
 
-from .views import ListMatch
+from .views import  MatchList
 
 urlpatterns += [
-    path('matches/', ListMatch.as_view(), name='list-match'),
+    path('matches/', MatchList.as_view(), name='list-match'),
 ]
 
 from .views import ViewMatch

@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework.parsers import JSONParser
 from .models import TheUser , Schedule, Location , Match , Result , Feedback
 from .serializers import ResultSerializer ,  MatchSerializer , FeedbackSerializer
@@ -34,6 +36,8 @@ class ListSchedule(APIView):
 
         data_n = data_r[ "items"]
 
+        data_n.sort(key=lambda match: (match[ "date"], match[ "start_time"]))
+
         # Return a list of “Schedule” entry to the client
         return Response(data_n, status=status.HTTP_200_OK)
 
@@ -54,12 +58,12 @@ class ListSchedule(APIView):
         except Location.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        # Create the “Schedule” entry using the data from the input, except the drill list
-        schedule = Schedule(id_user= TheUser.objects.get( id_user = id_user ), location=location, date=date, type=type, start_time=start_time)
-        schedule.save()
+        schedules = Schedule.objects.get( id_user= TheUser.objects.get( id_user = id_user ), location=location, date=date, type=type, start_time=start_time)
 
-        # Call the Pair method (not implemented here)
-        # pair()
+        if len( schedules ) == 0 :
+            # Create the “Schedule” entry using the data from the input, except the drill list
+            schedule = Schedule(id_user= TheUser.objects.get( id_user = id_user ), location=location, date=date, type=type, start_time=start_time)
+            schedule.save()
 
         pair(schedule)
 
@@ -125,51 +129,7 @@ class ViewSchedule(APIView):
         schedule.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class ListMatch(APIView):
 
-    def get(self, request):
-
-        id_user = request.GET.get('id_user')
-        type_current = request.GET.get('type')
-
-        # two of the users have accepted the match, it is a session
-        if type_current == "is_session":
-            matches = Match.objects.filter(Q(id_player_a = id_user , the_current_status_a='accepted', the_current_status_b='accepted') |
-                                           Q(id_player_b = id_user , the_current_status_a='accepted', the_current_status_b='accepted'))
-
-        # the current player has neither accepted nor rejected the match
-        elif type_current == "pending":
-            matches = Match.objects.filter(Q(id_player_a=id_user, the_current_status_a='pending') |
-                                           Q(id_player_b=id_user, the_current_status_b='pending'))
-
-        # the current player has accepted the match
-        elif type_current == "accepted":
-            matches = Match.objects.filter(
-                Q(id_player_a=id_user, the_current_status_a='accepted', the_current_status_b = 'rejected' ) |
-                Q(id_player_a=id_user, the_current_status_a='accepted', the_current_status_b='pending') |
-
-                Q(id_player_b=id_user, the_current_status_b='accepted', the_current_status_a ='rejected') |
-                Q(id_player_b=id_user, the_current_status_b='accepted', the_current_status_a='pending')
-
-            )
-
-        # the current player has rejected the match
-        elif type_current == "rejected":
-            matches = Match.objects.filter(Q(id_player_a=id_user, the_current_status_a='rejected') |
-                                           Q(id_player_b=id_user, the_current_status_b='rejected'))
-
-        else:
-            # Handle the case where type_current doesn't match any known type
-            matches = []
-
-        # Now, matches will contain the queryset with the relevant results based on type_current
-
-        print(matches)
-
-        serializer = MatchSerializer(matches, many=True)
-        
-        print( serializer.data)
-        return Response(serializer.data)
 
 
 class MatchList(APIView):
@@ -177,7 +137,11 @@ class MatchList(APIView):
     def get(self, request):
 
         id_user = request.GET.get('id_user')
+
         type_current = request.GET.get('type')
+        training_or_competitive = request.GET.get('toc')
+        usatt_rating = int( request.GET.get('ur'))
+        is_expired = request.GET.get('ie')
 
         # two of the users have accepted the match, it is a session
         if type_current == "is_session":
@@ -209,13 +173,59 @@ class MatchList(APIView):
             # Handle the case where type_current doesn't match any known type
             matches = []
 
-        # Now, matches will contain the queryset with the relevant results based on type_current
 
-        print(matches)
+        # filter for is_expired
+
+        current_date = date.today()
+
+        print( len( matches ))
+
+        if is_expired == "future" :
+            matches = [match for match in matches if match.date > current_date]
+        else :
+            matches = [match for match in matches if match.date <= current_date]
+        print(len(matches))
+
+        # filter for usatt rating
+
+
+        print( len( matches ))
+
+        new_matches = []
+        for x in matches :
+
+            if x.id_player_a.id_user == id_user :
+                if (usatt_rating - 250) < x.id_player_b.real_world_rating < usatt_rating :
+                    new_matches.append( x )
+
+            else :
+                if (usatt_rating - 250) < x.id_player_a.real_world_rating < usatt_rating :
+                    new_matches.append( x )
+
+        matches = new_matches
+
+        print( len( matches ))
+
+
+
+        # filter for training or competitive
+
+
+        print( len( matches ))
+
+
+        if training_or_competitive == "competitive" :
+            matches = [match for match in matches if match.type == "competitive"]
+        else :
+            matches = [match for match in matches if match.type == "training"]
+
+        print( len( matches ))
+
+        matches.sort(key=lambda match: (match.date, match.start_time))
+
+
 
         serializer = MatchSerializer(matches, many=True)
-
-        print(serializer.data)
         return Response(serializer.data)
 
 
@@ -228,16 +238,10 @@ class ViewMatch(APIView):
         except Match.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-
-
-
         serializer = MatchSerializer(match )
-
 
         # Return the “Schedule” entry and list of “Drill” entry
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 
 class ListPendingFeedback(APIView):
 
@@ -247,7 +251,9 @@ class ListPendingFeedback(APIView):
             return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         feedbacks = Feedback.objects.filter( id_player_a = id_user , status='pending')
+
         serializer = FeedbackSerializer(feedbacks, many=True)
+
         return Response(serializer.data)
 
 
@@ -296,7 +302,9 @@ class ListCompletedFeedback(APIView):
             return Response({'error': 'id_user is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         feedbacks = Feedback.objects.filter(id_player_a = id_user , status='completed')
+
         serializer = FeedbackSerializer(feedbacks, many=True)
+
         return Response(serializer.data)
 
 
