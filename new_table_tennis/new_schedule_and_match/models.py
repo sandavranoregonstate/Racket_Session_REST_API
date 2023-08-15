@@ -6,7 +6,7 @@ class Location(models.Model):
     the_address = models.CharField(max_length=255)
     table_number = models.IntegerField()
 
-class TheUser(models.Model):
+"""class TheUser(models.Model):
     id_user = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -23,7 +23,58 @@ class TheUser(models.Model):
     personal_feedback = models.FloatField()
 
     class Meta:
+        db_table = 'new_schedule_and_match_user'"""
+
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db import models
+
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password, name, last_name):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, name=name, last_name=last_name)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password, name, last_name):
+        user = self.create_user(email, password, name, last_name)
+        user.is_staff = True
+        user.is_superuser = True
+        user.save(using=self._db)
+        return user
+
+
+class TheUser(AbstractBaseUser, PermissionsMixin):
+    id_user = models.AutoField(primary_key=True)
+    email = models.EmailField(unique=True)
+    name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    # ... [rest of your fields here]
+
+    forehand_rubber_type = models.CharField(max_length=255, choices=[('short or long pimples', 'short or long pimples'),('inverted', 'inverted')])
+    backhand_rubber_type = models.CharField(max_length=255, choices=[('short or long pimples', 'short or long pimples'),('inverted', 'inverted')])
+    competition_rating = models.IntegerField()
+    real_world_rating = models.IntegerField()
+    serve_feedback = models.FloatField()
+    receive_feedback = models.FloatField()
+    forehand_loop_feedback = models.FloatField()
+    backhand_loop_feedback = models.FloatField()
+    forehand_block_feedback = models.FloatField()
+    backhand_block_feedback = models.FloatField()
+    personal_feedback = models.FloatField()
+
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)  # for admin access
+    objects = CustomUserManager()
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['name', 'last_name']
+
+    class Meta:
         db_table = 'new_schedule_and_match_user'
+
 
 class Match(models.Model):
     id_match = models.AutoField(primary_key=True)

@@ -97,3 +97,22 @@ from .views import LocationListView
 urlpatterns += [
     path('locations/', LocationListView.as_view(), name='location-list'),
 ]
+
+# urls.py
+
+from django.urls import path
+from .views import TheRegisterUserView
+
+urlpatterns += [
+    path('the_register/', TheRegisterUserView.as_view(), name='user-registration'),
+    # ... other URL patterns
+]
+
+from django.urls import path
+from .views import UserLoginView , UserLogoutView
+
+urlpatterns = [
+    path('login/', UserLoginView.as_view(), name='user-login'),
+    path('logout/', UserLogoutView.as_view(), name='user-logout'),
+
+]
