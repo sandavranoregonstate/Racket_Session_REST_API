@@ -104,11 +104,11 @@ WSGI_APPLICATION = "new_table_tennis.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'database_racket_session',   # Use your PostgreSQL database name here.
-        'USER': 'sandavrannn',
-        'PASSWORD': '',
-        'HOST': 'localhost',    # Use the IP if your PostgreSQL is not on the same machine.
-        'PORT': '5432',         # The default PostgreSQL port. Update if it's different.
+        'NAME': 'defaultdb',   # Use your PostgreSQL database name here.
+        'USER': 'doadmin',
+        'PASSWORD': 'AVNS__bQSDYNMQpetx6ksBAG',
+        'HOST': 'db-postgresql-sfo2-96336-do-user-14533055-0.b.db.ondigitalocean.com',    # Use the IP if your PostgreSQL is not on the same machine.
+        'PORT': '25060',         # The default PostgreSQL port. Update if it's different.
     }
 }
 
