@@ -93,15 +93,15 @@ WSGI_APPLICATION = "new_table_tennis.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-"""DATABASES = {
+DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
 } 
-"""
 
-DATABASES = {
+
+"""DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'defaultdb',   # Use your PostgreSQL database name here.
@@ -110,7 +110,7 @@ DATABASES = {
         'HOST': 'db-postgresql-sfo2-96336-do-user-14533055-0.b.db.ondigitalocean.com',    # Use the IP if your PostgreSQL is not on the same machine.
         'PORT': '25060',         # The default PostgreSQL port. Update if it's different.
     }
-}
+}"""
 
 
 # Password validation
